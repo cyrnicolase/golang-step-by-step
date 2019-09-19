@@ -56,7 +56,16 @@ import (
 	"fmt"
 	"log"
 	"net"
+	// "strings"
 	"time"
+)
+
+const (
+	// END_OF_FILE 消息结束标志
+	END_OF_FILE = "EOF"
+
+	// BUFFER_LEN 接收缓冲区长度
+	BUFFER_LEN = 5
 )
 
 func main() {
@@ -78,17 +87,21 @@ func main() {
 }
 
 func handleConn(conn net.Conn) {
+	defer func() { fmt.Println("conn.Close()") }()
 	defer conn.Close()
-	var iput string
-	buf := make([]byte, 5)
+	src := make([]byte, 0, 512)
+	buf := make([]byte, BUFFER_LEN)
 	for {
 		conn.Read(buf)
-		input = string + string(buf)
-
+		src = append(src, buf...)
 		// 如果一次消息接收完成
-		if bytes.Contains(buf, []byte("EOF")) {
-			go biz(input, conn)
-			input = ""
+		if bytes.Contains(buf, []byte(END_OF_FILE)) {
+			src = bytes.TrimSpace(src)
+			fmt.Printf("[%s]", src)
+			src = bytes.Trim(src, END_OF_FILE)
+
+			biz(string(src), conn)
+			src = make([]byte, 0, 512)
 		}
 
 		buf = make([]byte, 5)
@@ -98,6 +111,9 @@ func handleConn(conn net.Conn) {
 func biz(input string, conn net.Conn) {
 	t, _ := time.Now().MarshalText()
 	output := make([]byte, 0)
+	output = append(output, t...)
+	output = append(output, []byte(":")...)
+	output = append(output, []byte(input)...)
 
 	conn.Write(output)
 }
